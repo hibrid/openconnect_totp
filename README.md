@@ -1,5 +1,3 @@
-Here's the updated README file with the additional step for storing the password in a file and the corresponding warnings:
-
 # OpenConnect VPN Service
 
 This project provides a set of scripts to automate the installation and configuration of an OpenConnect VPN service on a Linux system. It allows you to establish a VPN connection to a Cisco ASA firewall using OpenConnect and supports both BASE32 token and TOTP (Time-based One-Time Password) authentication methods.
@@ -24,29 +22,40 @@ This project provides a set of scripts to automate the installation and configur
    - Open the password file and enter your VPN password on a single line.
    - Save the file and ensure that it has restricted permissions (e.g., `chmod 600 /path/to/password.txt`).
 
-4. Run the `install_vpn_service.sh` script with sudo or as root:
+4. Obtain the TOTP secret:
+   - If you have a QR code for the TOTP secret:
+     - Use a QR code reader browser extension or a mobile app to scan the QR code.
+     - The QR code reader will display the TOTP secret as a Base32 encoded string.
+   - If you are using Google Authenticator or Authy:
+     - Open the Google Authenticator or Authy app on your mobile device.
+     - Tap on the "Add" button and select "Scan QR Code".
+     - Scan the QR code provided by your VPN administrator.
+     - The app will display the TOTP secret and generate time-based one-time passwords.
+   - Make note of the TOTP secret for use during the installation process.
+
+5. Run the `install_vpn_service.sh` script with sudo or as root:
    ```
    sudo ./install_vpn_service.sh
    ```
 
-5. Follow the prompts to provide the necessary information:
+6. Follow the prompts to provide the necessary information:
    - VPN host (example.com)
    - VPN group (TextNow-Employee or TextNow-FullTunnel)
    - VPN username
    - Path to the password file (e.g., `/path/to/password.txt`)
    - Authentication method (BASE32_TOKEN or TOTP_SECRET)
      - If BASE32_TOKEN is selected, enter the BASE32 token
-     - If TOTP_SECRET is selected, enter a name for the TOTP secret and the secret itself
+     - If TOTP_SECRET is selected, enter a name for the TOTP secret and the secret itself (obtained in step 4)
 
-6. The script will install the required dependencies (openconnect, totp) if not already installed.
+7. The script will install the required dependencies (openconnect, totp) if not already installed.
 
-7. The script will create the necessary files and directories:
+8. The script will create the necessary files and directories:
    - `/etc/vpn-connection.env`: Environment file containing the VPN configuration variables
    - `/etc/systemd/system/my_vpn.service`: SystemD service file for the VPN connection
    - `/usr/local/bin/vpn-connection.sh`: Script that establishes the VPN connection
    - `/etc/totp.json`: File storing the TOTP secret (if TOTP authentication is used)
 
-8. The script will start the VPN service automatically.
+9. The script will start the VPN service automatically.
 
 ## Usage
 
@@ -76,4 +85,5 @@ This project provides a set of scripts to automate the installation and configur
 - Storing passwords and secrets in plain text files poses a security risk. It is strongly recommended to encrypt these files and modify the scripts to decrypt them when needed. Consider using secure encryption mechanisms and storing the encryption keys separately.
 - Regularly monitor the access to the password file and TOTP secret file to detect any unauthorized access attempts.
 - When providing the path to the password file during the installation process, ensure that the file is stored in a secure location with limited access permissions.
+- Keep the TOTP secret confidential and do not share it with anyone. If the secret is compromised, generate a new secret and update it in the VPN configuration.
 

@@ -1,0 +1,16 @@
+[Unit]
+Description=Openconnect VPN
+After=network-online.target
+Conflicts=shutdown.target sleep.target
+
+[Service]
+Type=forking
+EnvironmentFile=/path/to/vpn-connection.env
+ExecStart=/path/to/vpn-connection.sh
+TimeoutStartSec=120s
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

@@ -130,7 +130,7 @@ After=network-online.target
 Conflicts=shutdown.target sleep.target
 
 [Service]
-Environment=PATH=/usr/local/go/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PATH=/usr/local/go/bin:/usr/local/bin:/usr/sbin:/usr/bin:/bin
 Type=forking
 EnvironmentFile=/path/to/vpn-connection.env
 ExecStart=/path/to/vpn-connection.sh
@@ -160,6 +160,6 @@ chmod +x "$VPN_SCRIPT_PATH"
 systemctl daemon-reload
 systemctl enable my_vpn
 systemctl start my_vpn --no-block
-systemctl status my_vpn
+systemctl status my_vpn  --no-block
 
 echo "VPN service installed and started successfully."

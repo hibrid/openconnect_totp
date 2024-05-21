@@ -31,79 +31,88 @@ if [ ! -L /etc/resolv.conf ] || [ "$(readlink /etc/resolv.conf)" != "/run/resolv
     dpkg-reconfigure -f noninteractive resolvconf
 fi
 
-# Prompt the user for details
-read -p "Enter the VPN host (example.com): " HOST
-read -p "Enter the VPN group (TextNow-Employee|TextNow-FullTunnel): " GROUP
-read -p "Enter your VPN username: " USERNAME
-
-# Validate the password file path
-while true; do
-    read -p "Enter the path to the password file: " PASSWORD_FILE
-    if [ -f "$PASSWORD_FILE" ]; then
-        break
-    else
-        echo "Password file not found at $PASSWORD_FILE. Please enter a valid path."
-    fi
-done
-
-echo "Choose the authentication method:"
-echo "1. BASE32_TOKEN"
-echo "2. TOTP_SECRET"
-read -p "Enter your choice (1 or 2): " AUTH_CHOICE
-
-if [[ "$AUTH_CHOICE" == "1" ]]; then
-    read -p "Enter your BASE32_TOKEN: " BASE32_TOKEN
-elif [[ "$AUTH_CHOICE" == "2" ]]; then
-    # Check if totp is installed
-    if ! command_exists totp; then
-        echo "Installing totp..."
-        # Clone the totp repository
-        git clone https://github.com/arcanericky/totp.git
-        cd totp
-
-        # Determine the platform
-    	case "$(uname -m)" in
-           x86_64)
-            	PLATFORM="linux-amd64"
-            	BINARY_NAME="totp-linux-amd64"
-            	;;
-           arm)
-            	PLATFORM="linux-arm"
-            	BINARY_NAME="totp-linux-arm"
-            	;;
-           aarch64)
-            	PLATFORM="linux-arm64"
-            	BINARY_NAME="totp-linux-arm64"
-            	;;
-           *)
-            	echo "Unsupported platform"
-            	exit 1
-          	  ;;
-    	esac
-
-        # Build the totp binary
-        make $PLATFORM
-
-        # Move the totp binary to ~/go/bin
-        mkdir -p ~/go/bin
-        mv /usr/local/bin/$BINARY_NAME ~/go/bin/totp
-
-        # Clean up
-        cd ..
-        rm -rf totp
-
-        # Update the PATH environment variable
-        export PATH=$PATH:~/go/bin
-    fi
-
-    read -p "Enter a name for your TOTP secret: " TOTP_SECRET_NAME
-    read -p "Enter your TOTP secret: " TOTP_SECRET
-
-    # Configure the TOTP secret
-    totp config add "$TOTP_SECRET_NAME" "$TOTP_SECRET" --file=/etc/totp.json
+# Check for existing environment variables
+if [ -n "$VPN_GROUP" ] && [ -n "$VPN_USERNAME" ] && [ -n "$TOTP_SECRET" ] && [ -n "$BASE32_TOKEN" ] && [ -n "$HOST" ] && [ -f "/home/kasm-user/.cisco/pass.txt" ]; then
+    GROUP="$VPN_GROUP"
+    USERNAME="$VPN_USERNAME"
+    PASSWORD_FILE="/home/kasm-user/.cisco/pass.txt"
+    TOTP_SECRET_NAME="default"
+    echo "Using existing environment variables and password file."
 else
-    echo "Invalid choice. Exiting."
-    exit 1
+    # Prompt the user for details
+    read -p "Enter the VPN host (example.com): " HOST
+    read -p "Enter the VPN group (TextNow-Employee|TextNow-FullTunnel): " GROUP
+    read -p "Enter your VPN username: " USERNAME
+
+    # Validate the password file path
+    while true; do
+        read -p "Enter the path to the password file: " PASSWORD_FILE
+        if [ -f "$PASSWORD_FILE" ]; then
+            break
+        else
+            echo "Password file not found at $PASSWORD_FILE. Please enter a valid path."
+        fi
+    done
+
+    echo "Choose the authentication method:"
+    echo "1. BASE32_TOKEN"
+    echo "2. TOTP_SECRET"
+    read -p "Enter your choice (1 or 2): " AUTH_CHOICE
+
+    if [[ "$AUTH_CHOICE" == "1" ]]; then
+        read -p "Enter your BASE32_TOKEN: " BASE32_TOKEN
+    elif [[ "$AUTH_CHOICE" == "2" ]]; then
+        # Check if totp is installed
+        if ! command_exists totp; then
+            echo "Installing totp..."
+            # Clone the totp repository
+            git clone https://github.com/arcanericky/totp.git
+            cd totp
+
+            # Determine the platform
+            case "$(uname -m)" in
+                x86_64)
+                    PLATFORM="linux-amd64"
+                    BINARY_NAME="totp-linux-amd64"
+                    ;;
+                arm)
+                    PLATFORM="linux-arm"
+                    BINARY_NAME="totp-linux-arm"
+                    ;;
+                aarch64)
+                    PLATFORM="linux-arm64"
+                    BINARY_NAME="totp-linux-arm64"
+                    ;;
+                *)
+                    echo "Unsupported platform"
+                    exit 1
+                    ;;
+            esac
+
+            # Build the totp binary
+            make $PLATFORM
+
+            # Move the totp binary to ~/go/bin
+            mkdir -p ~/go/bin
+            mv /usr/local/bin/$BINARY_NAME ~/go/bin/totp
+
+            # Clean up
+            cd ..
+            rm -rf totp
+
+            # Update the PATH environment variable
+            export PATH=$PATH:~/go/bin
+        fi
+
+        read -p "Enter a name for your TOTP secret: " TOTP_SECRET_NAME
+        read -p "Enter your TOTP secret: " TOTP_SECRET
+
+        # Configure the TOTP secret
+        totp config add "$TOTP_SECRET_NAME" "$TOTP_SECRET" --file=/etc/totp.json
+    else
+        echo "Invalid choice. Exiting."
+        exit 1
+    fi
 fi
 
 # Create the environment file
@@ -148,7 +157,6 @@ fi
 sed -i "s|/path/to/vpn-connection.env|$ENV_FILE|" "$SERVICE_FILE_PATH"
 sed -i "s|/path/to/vpn-connection.sh|$VPN_SCRIPT_PATH|" "$SERVICE_FILE_PATH"
 
-
 # Install the service file
 cp "$SERVICE_FILE_PATH" /etc/systemd/system/
 
@@ -160,6 +168,6 @@ chmod +x "$VPN_SCRIPT_PATH"
 systemctl daemon-reload
 systemctl enable my_vpn
 systemctl start my_vpn --no-block
-systemctl status my_vpn  --no-block
+systemctl status my_vpn --no-block
 
 echo "VPN service installed and started successfully."
